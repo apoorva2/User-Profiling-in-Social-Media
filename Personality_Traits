@@ -1,0 +1,83 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
+from sklearn.cross_validation import train_test_split
+from sklearn.metrics import mean_squared_error
+import numpy as np
+import random
+from math import sqrt
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+
+
+def linearRegr(train_data):
+    feature_cols = ['gender', 'WC', 'WPS', 'Sixltr', 'Dic', 'Numerals', 'funct', 'pronoun', 'ppron', 'i', 'we', 'you', 'shehe', 'they', 'ipron', 'article', 'verb', 'auxverb', 'past', 'present', 'future', 'adverb', 'preps', 'conj', 'negate', 'quant', 'number', 'swear', 'social', 'family', 'friend', 'humans', 'affect', 'posemo', 'negemo', 'anx', 'anger', 'sad', 'cogmech', 'insight', 'cause', 'discrep', 'tentat', 'certain', 'inhib', 'incl', 'excl', 'percept', 'see', 'hear', 'feel', 'bio', 'body', 'health', 'sexual', 'ingest', 'relativ', 'motion', 'space', 'time', 'work', 'achieve', 'leisure', 'home', 'money', 'relig', 'death', 'assent', 'nonfl', 'filler', 'Period', 'Comma', 'Colon', 'SemiC', 'QMark', 'Exclam', 'Dash', 'Quote', 'Apostro', 'Parenth', 'OtherP', 'AllPct']
+    #feature_cols = ['WC', 'WPS', 'Sixltr', 'Dic', 'Numerals', 'funct', 'pronoun', 'ppron', 'i', 'we', 'you', 'shehe', 'they', 'ipron', 'article', 'verb', 'auxverb', 'past', 'present', 'future', 'adverb', 'preps', 'conj', 'negate', 'quant', 'number', 'swear', 'social', 'family', 'friend', 'humans', 'affect', 'posemo', 'negemo', 'anx', 'anger', 'sad', 'cogmech', 'insight', 'cause', 'discrep', 'tentat', 'certain', 'inhib', 'incl', 'excl', 'percept', 'see', 'hear', 'feel', 'bio', 'body', 'health', 'sexual', 'ingest', 'relativ', 'motion', 'space', 'time', 'work', 'achieve', 'leisure', 'home', 'money', 'relig', 'death', 'assent', 'nonfl', 'filler', 'Period', 'Comma', 'Colon', 'SemiC', 'QMark', 'Exclam', 'Dash', 'Quote', 'Apostro', 'Parenth', 'OtherP', 'AllPct']
+    X = train_data[feature_cols]
+    ptraits = ['ope', 'con', 'ext', 'agr', 'neu']
+
+    y1 = train_data.ope
+    lm1 = LinearRegression()
+    lm1.fit(X, y1)
+    zip(feature_cols, lm1.coef_)
+    y2 = train_data.con
+    lm2 = LinearRegression()
+    lm2.fit(X, y2)
+    zip(feature_cols, lm2.coef_)
+    y3 = train_data.ext
+    lm3 = LinearRegression()
+    lm3.fit(X, y3)
+    zip(feature_cols, lm3.coef_)
+    y4 = train_data.agr
+    lm4 = LinearRegression()
+    lm4.fit(X, y4)
+    zip(feature_cols, lm4.coef_)
+    y5 = train_data.neu
+    lm5 = LinearRegression()
+    lm5.fit(X, y5)
+    zip(feature_cols, lm5.coef_)
+    lr = [lm1,lm2,lm3,lm4,lm5]
+    return lr
+
+
+
+# read profile data into a DataFrame
+data1 = pd.read_csv("C:\\Users\\swetha Ch\\Desktop\\FacebookDataTCSS555Project\\TCSS555\\Train\\profile\\profile.csv", index_col=2)
+# read LIWC data into a DataFrame
+data2 = pd.read_csv('C:\\Users\\swetha Ch\\Desktop\\FacebookDataTCSS555Project\\TCSS555\\LIWC.csv', index_col=1)
+
+merged = pd.merge(left=data1,right=data2, how='left',left_on='userid',right_on= 'userId')
+merged_train, merged_test = train_test_split(merged, test_size = 0.2)
+print(len(merged_train),len(merged_test))
+
+traits = ['ope', 'con', 'ext','agr','neu']
+l_obj = linearRegr(merged_train)
+feature_cols = ['gender', 'WC', 'WPS', 'Sixltr', 'Dic', 'Numerals', 'funct', 'pronoun', 'ppron', 'i', 'we', 'you', 'shehe', 'they', 'ipron', 'article', 'verb', 'auxverb', 'past', 'present', 'future', 'adverb', 'preps', 'conj', 'negate', 'quant', 'number', 'swear', 'social', 'family', 'friend', 'humans', 'affect', 'posemo', 'negemo', 'anx', 'anger', 'sad', 'cogmech', 'insight', 'cause', 'discrep', 'tentat', 'certain', 'inhib', 'incl', 'excl', 'percept', 'see', 'hear', 'feel', 'bio', 'body', 'health', 'sexual', 'ingest', 'relativ', 'motion', 'space', 'time', 'work', 'achieve', 'leisure', 'home', 'money', 'relig', 'death', 'assent', 'nonfl', 'filler', 'Period', 'Comma', 'Colon', 'SemiC', 'QMark', 'Exclam', 'Dash', 'Quote', 'Apostro', 'Parenth', 'OtherP', 'AllPct']
+#feature_cols = ['WC', 'WPS', 'Sixltr', 'Dic', 'Numerals', 'funct', 'pronoun', 'ppron', 'i', 'we', 'you', 'shehe', 'they', 'ipron', 'article', 'verb', 'auxverb', 'past', 'present', 'future', 'adverb', 'preps', 'conj', 'negate', 'quant', 'number', 'swear', 'social', 'family', 'friend', 'humans', 'affect', 'posemo', 'negemo', 'anx', 'anger', 'sad', 'cogmech', 'insight', 'cause', 'discrep', 'tentat', 'certain', 'inhib', 'incl', 'excl', 'percept', 'see', 'hear', 'feel', 'bio', 'body', 'health', 'sexual', 'ingest', 'relativ', 'motion', 'space', 'time', 'work', 'achieve', 'leisure', 'home', 'money', 'relig', 'death', 'assent', 'nonfl', 'filler', 'Period', 'Comma', 'Colon', 'SemiC', 'QMark', 'Exclam', 'Dash', 'Quote', 'Apostro', 'Parenth', 'OtherP', 'AllPct']
+xtest = merged_test[feature_cols]
+xtest = xtest.copy()
+rms = []
+
+
+for j in range(len(traits)):
+    predictions = []
+    targets = []
+    for i in range(len(merged_test)):
+        #print(xtest.iloc[i])
+        x=l_obj[j].predict(xtest.iloc[i])
+        #print (x,j)
+        predictions.append(x)
+        m=merged_test.iloc[i].ope
+        targets.append(m)
+    print(traits[j])
+    RMSE = mean_squared_error(targets, predictions)**0.5
+    #RMSE = np.sqrt(np.mean((predictions-targets)**2))
+    #RMSE = rmse(np.array(predictions), np.array(targets))
+    print("RMSE",RMSE)
+    rms.append(RMSE)
+
+
+print('rms',rms)

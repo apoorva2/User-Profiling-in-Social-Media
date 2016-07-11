@@ -1,0 +1,266 @@
+from __future__ import division
+from collections import defaultdict
+import os
+import re
+import argparse
+import io
+import importlib
+import os
+import codecs
+import traceback
+import logging
+from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize, word_tokenize
+import nltk
+import textblob
+from textblob.classifiers import NaiveBayesClassifier
+from textblob import formats
+from xml.etree import ElementTree
+import pickle
+import csv
+import json
+import sys
+import random
+import re
+import math
+import operator
+
+dataset = [],[]
+data = []
+
+
+
+def split_data(data,prob,count):
+    #split data as per the split ratio
+    results = [],[]
+    trainSize = int(count * prob)
+    print ("trainSize", trainSize)
+    #while len(result) < trainSize:
+    i=0
+    for row in data:
+        i += 1
+        results[1 if i > trainSize else 0].append(row)
+        #print("row", row)
+    #print ("results", results)
+    return results
+
+
+def tokenize(message):
+    '''preprocess the message (string) to produce a bag or words.'''
+    message = message.lower()
+    all_words = re.findall("[a-z0-9]+",message)
+    #print("all words", all_words)
+    return set(all_words)
+
+
+def count_words(training_set):
+    ''' training set consists of pairs (message,is_male),divide all words and their occurances in each status '''
+    counts = defaultdict(lambda:[0,0,0,0])
+    for message,categ in training_set:
+        if categ==1: val = 1
+        elif categ == 2: val = 2
+        elif categ == 3: val = 3
+        elif categ == 4: val = 4
+        print("message, categ, val", message, categ, val)
+        for word in tokenize(message):
+            counts[word][0 if val==1 else 1 if val == 2 else 2 if val == 3 else 3] += 1
+        #print("count" , counts)
+    return counts
+
+
+def class_probabiltiies(categ1,categ2,categ3,categ4):
+    ''' Calculate priors '''
+    total_message = categ1+categ2+categ3+categ4
+    prior_categ1 = categ1/total_message
+    prior_categ2 = categ2/total_message
+    prior_categ3 = categ3/total_message
+    prior_categ4 = categ4/total_message
+
+    print("categ1,categ2,categ3,categ4", categ1,categ2,categ3,categ4)
+    print("prior_categ1, prior_categ2, prior_categ3, prior_categ4", prior_categ1, prior_categ2, prior_categ3, prior_categ4)
+    return prior_categ1, prior_categ2, prior_categ3, prior_categ4
+
+
+def word_probabilities(counts,prior_categ1,prior_categ2,prior_categ3,prior_categ4,k=0.5):
+    '''turn the word_counts into a list of triplets:
+       w , p(w|male),p(w|females)
+    '''
+
+    return [(w,
+             (categ1+k)/(prior_categ1 + 2 * k),
+             (categ2+k)/(prior_categ2 + 2 * k),
+             (categ3+k)/(prior_categ3 + 2 * k),
+             (categ4+k)/ (prior_categ4 + 2 *k))
+             for w,(categ1,categ2,categ3,categ4) in counts.iteritems()]
+
+
+def classify_probabiliy(word_probs,message,prior_categ1,prior_categ2,prior_categ3,prior_categ4):
+    ''' Classify a message as either spam (1) or not_spam (0)'''
+    message_words = tokenize(message)
+
+    log_prob_if_cat1 = log_prob_if_cat2 =log_prob_if_cat3 = log_prob_if_cat4 = 0
+
+    #iterate through each word in our vocab
+    for word, cat1, cat2, cat3, cat4 in word_probs:
+        print (cat1, cat2, cat3, cat4)
+        if word in message_words:
+
+            log_prob_if_cat1 += math.log(cat1)
+            log_prob_if_cat2 += math.log(cat2)
+            log_prob_if_cat3 += math.log(cat3)
+            log_prob_if_cat4 += math.log(cat4)
+            #log_prob_if_female += math.log(prob_if_female)
+
+        else:
+
+            log_prob_if_cat1 += math.log(2 - cat1)
+            log_prob_if_cat2 += math.log(2 - cat2)
+            log_prob_if_cat3 += math.log(2 - cat3)
+            log_prob_if_cat4 += math.log(2 - cat4)
+            #log_prob_if_female += math.log(1 - prob_if_female)
+
+    prob_if_cat1 = math.exp(log_prob_if_cat1) * prior_categ1
+    prob_if_cat2 = math.exp(log_prob_if_cat2) * prior_categ2
+    prob_if_cat3 = math.exp(log_prob_if_cat3) * prior_categ3
+    prob_if_cat4 = math.exp(log_prob_if_cat4) * prior_categ4
+    #prob_if_female = math.exp(log_prob_if_female) * prior_female
+
+    list1 = [prob_if_cat1,prob_if_cat2,prob_if_cat3,prob_if_cat4]
+    print ("prev",list1)
+    list1.sort(key=int)
+    print ("aft",list1)
+
+    if prob_if_cat1 > prob_if_cat2:
+        return True
+    else:
+        return False
+
+
+def classify(word_probs1, prior_categ1, prior_categ2, prior_categ3, prior_categ4, message1):
+        return classify_probabiliy(word_probs1, message1, prior_categ1,prior_categ2,prior_categ3,prior_categ4)
+
+
+def train(self,training_set):
+    #calculate the number of males and females in the trianing data and return the word probabilities
+    categ1 = categ2 = categ3 = categ4 = categun = 0
+    #num_females = 0
+    print ("training set", training_set)
+    for [message, age_cat] in training_set:
+        print ("age_cat",age_cat)
+        if age_cat  == 1:
+            categ1=categ1+1
+        elif age_cat  == 2:
+            categ2=categ2+1
+        elif age_cat  == 3:
+            categ3=categ3+1
+        elif age_cat  == 4:
+            categ4=categ4+1
+    print("age cat 1:", categ1)
+    print("age cat 2:", categ2)
+    print("age cat 3:", categ3)
+    print("age cat 4:", categ4)
+
+    # Count the words in each status message
+    word_counts = count_words(training_set)
+    #calculate the prior probabilities
+    prior_categ1,prior_categ2,prior_categ3,prior_categ4 = class_probabiltiies(categ1,categ2,categ3,categ4)
+    #calculate the prbabilities for each word
+    word_probs = word_probabilities(word_counts,prior_categ1,prior_categ2,prior_categ3,prior_categ4,0.5)
+    print("word probs", word_probs)
+    return word_probs,prior_categ1,prior_categ2,prior_categ3,prior_categ4
+
+
+
+def precision(tp,fp,fn,tn):
+    ''' What fraction of postitives were correctly identified '''
+    return tp / (tp + fp)
+
+
+
+def recall(tp,fp,fn,tn):
+    '''How accurate were our positive predictions '''
+    return tp/(tp+fn)
+
+
+def accuracy(tp,fp,fn,tn):
+    correct = tp + tn
+    total = tp + tn + fn + fp
+
+    return correct/total
+
+
+
+def f1_score(tp,fp,fn,tn):
+    p = precision(tp,fp,fn,tn)
+    r = recall(tp,fp,fn,tn)
+
+    return 2 * p * r / (p+r)
+
+#PROGRAM START
+with open("C:\Users\swetha Ch\Desktop\FacebookDataTCSS555Project\TCSS555\Train\profile\profile3.csv", "r") as profiles:
+    #read from the profile and write to a list "data".
+    count = 0
+    next(profiles)
+    for line in profiles:
+        main = re.split(',', line)
+        userID = main[1]
+        age = main[2]
+        count = count+1
+        print(age)
+        if age>"18" and age <="24":
+            ageCat = 1
+        elif age >= "25" and age <="34":
+            ageCat = 2
+        elif age >= "35" and age <="49":
+            ageCat = 3
+        elif age >= "50" :
+            ageCat = 4
+        else: print ("invalid age group")
+#        print ("ageCat", ageCat)
+        with open("C:\Users\swetha Ch\Desktop\FacebookDataTCSS555Project\TCSS555\Train\Text"+"\\"+userID+".txt", "r") as status:
+            values = status.read()
+            values = values.replace(r"|"," ")
+            values = values.replace(r"\n", " ")
+            #print ("values", values)
+            data.append((values, ageCat))
+            status.close()
+
+    print("count", count)
+profiles.close()
+
+print (data)
+
+self = 0.5
+
+random.seed(0)
+#split the data according to the given split ratio
+train_data, test_data = split_data(data,0.70,count)
+#print("Train data", train_data)
+#print("length of Train data", len(train_data))
+#print("length of Test data", len(test_data))
+##print("Test data", test_data)
+##calculate the word probabilitites and prior probabilitites for the status message.
+word_probs,prior_categ1,prior_categ2,prior_categ3,prior_categ4=train(self, train_data)
+#print ("prior_male,prior_female", prior_male,prior_female)
+#as per the calulated probabilities, predict the gender for status in test data
+classified = [(message,categ,classify(word_probs, prior_categ1,prior_categ2,prior_categ3,prior_categ4,message)) for message, categ in test_data]
+print ("classified",classified)
+
+
+fp=fn=tp=tn=0
+
+for x,est,tru in classified:
+    print (est,tru)
+    if est == "0" and tru==False:
+        fp+=1
+    elif est== "0" and tru==True:
+        tp+=1
+    elif est== "1" and tru == False:
+        tn+=1
+    else:
+        fn+=1
+print ("tp,fp,fn,tn", tp,fp,fn,tn)
+#error metrics
+print ('accuracy: {}'.format(accuracy(tp,fp,fn,tn)))
+print ('precision: {}'.format(precision(tp,fp,fn,tn)))
+print ('recall: {}'.format(f1_score(tp,fp,fn,tn)))
